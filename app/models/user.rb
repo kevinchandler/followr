@@ -22,6 +22,7 @@ class User < ActiveRecord::Base
 
   def init_follow_prefs
     self.twitter_follow_preference = TwitterFollowPreference.new(user: self)
+    twitter_follow_preference.update_column(:rate_limit_until, DateTime.now)
   end
 
   def rate_limited?
