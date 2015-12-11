@@ -29,7 +29,7 @@ class PagesController < ApplicationController
     if trending.present?
       @trending = []
       trending.each do |hashtag|
-        @trending << "<a href='http://twitter.com/hashtag/#{hashtag}'>#{hashtag.sub('#', '')}</a>"
+        @trending << "<a href='http://twitter.com/hashtag/#{hashtag.sub('#', '')}'>#{hashtag}</a>"
       end
       @trending = @trending.join(' | ')
     end
