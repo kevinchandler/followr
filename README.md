@@ -2,6 +2,8 @@
 
 Mass follow & profit w/ followers
 
+[Working demo](https://followr.herokuapp.com)
+
 ## Development environment
 A `Vagrantfile` is provided with the app, allowing to boot a self-contained development environment. Vagrant 1.7+ is required to provision the VM correctly.
 
