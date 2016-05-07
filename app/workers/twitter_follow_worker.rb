@@ -17,8 +17,8 @@ class TwitterFollowWorker
           hashtags = follow_prefs.hashtags.gsub('#','').gsub(' ','').split(',').shuffle
 
           client = user.credential.twitter_client rescue nil
-          next if client.nil? 
-          
+          next if client.nil?
+
           # Keep track of # of followers user has hourly
           Follower.compose(user) if Follower.can_compose_for?(user)
 
@@ -50,7 +50,16 @@ class TwitterFollowWorker
         rescue Twitter::Error::Forbidden => e
           if e.message.index('Application cannot perform write actions')
             Airbrake.notify(e)
-            user.credential.update_attributes(is_valid: false)
+          end
+        rescue Twitter::Error::Unauthorized => e
+          user.credential.update_attributes(is_valid: false)
+
+          if e.message.index 'Read-only application cannot POST.'
+            Airbrake.notify(e)
+            Credential.update_all(is_valid: false)
+            ActionMailer::Base.mail(:to => ENV['ADMIN_EMAIL'], :subject => 'Twitter has restricted write access', :body => 'Subject says it all').deliver if send_notification?
+            Rails.cache.write('read-only-application-notification', true, expires_in: 10.hours)
+            raise "Read-only application cannot POST."
           end
         rescue Twitter::Error::Unauthorized => e
           # follow_prefs.update_attributes(mass_follow: false, mass_unfollow: false)
@@ -62,4 +71,10 @@ class TwitterFollowWorker
       end
     end
   end
+
+  def send_notification?
+    cache = Rails.cache.read('read-only-application-notification')
+    cache.nil? && true || false
+  end
+
 end

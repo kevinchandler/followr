@@ -18,7 +18,7 @@ class TwitterUnfollowWorker
           follow_prefs = user.twitter_follow_preference
           unfollow_days = follow_prefs.unfollow_after
           users_to_unfollow = user.twitter_follows.where('followed_at <= ? AND UNFOLLOWED IS NOT TRUE', unfollow_days.to_i.days.ago)
-          
+
           client = user.credential.twitter_client rescue nil
           client_muted_ids = client.muted_ids.to_a rescue []
 
@@ -31,7 +31,7 @@ class TwitterUnfollowWorker
 
               # don't unfollow people who the user has manually unmuted
               next unless client_muted_ids.include?(twitter_user_id)
-              
+
               if client.unfollow(twitter_user_id)
                 followed_user.update_attributes({ unfollowed: true, unfollowed_at: DateTime.now })
                 client.unmute(twitter_user_id)
@@ -39,6 +39,19 @@ class TwitterUnfollowWorker
               end
 
             rescue Twitter::Error::Forbidden => e
+              if e.message.index('Application cannot perform write actions')
+                user.credential.update_attributes(is_valid: false)
+              end
+            rescue Twitter::Error::Unauthorized => e
+              user.credential.update_attributes(is_valid: false)
+
+              if e.message.index 'Read-only application cannot POST.'
+                Airbrake.notify(e)
+                Credential.update_all(is_valid: false)
+                ActionMailer::Base.mail(:to => ENV['ADMIN_EMAIL'], :subject => 'Twitter has restricted write access', :body => 'Subject says it all').deliver if send_notification?
+                Rails.cache.write('read-only-application-notification', true, expires_in: 10.hours)
+                raise "Read-only application cannot POST."
+              end
             rescue Twitter::Error::NotFound => e
               followed_user.update_attributes({ unfollowed: true, unfollowed_at: DateTime.now })
             rescue => e
@@ -51,4 +64,10 @@ class TwitterUnfollowWorker
       end
     end
   end
+
+  def send_notification?
+    cache = Rails.cache.read('read-only-application-notification')
+    cache.nil? && true || false
+  end
+
 end
