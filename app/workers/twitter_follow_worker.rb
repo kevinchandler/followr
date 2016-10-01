@@ -31,6 +31,9 @@ class TwitterFollowWorker
               username = tweet.user.screen_name.to_s
               twitter_user_id = tweet.user.id
 
+
+              # dont follow people who have opted out
+              next if username.in? OptOuter.all
               # dont follow people we previously have
               entry = TwitterFollow.where(user: user, username: username)
               next if entry.present?
