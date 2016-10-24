@@ -4,6 +4,7 @@ class OptOuter
   def self.all
     %w(
       maxjacobson
+      plaintshirts
     )
   end
 end

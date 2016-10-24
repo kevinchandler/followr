@@ -14,9 +14,11 @@
 # Ignore all logfiles and tempfiles.
 /log/*
 !/log/.keep
+.keep
 /tmp
 .todo
 .DS_Store
 .env
+
 
 .vagrant/**
