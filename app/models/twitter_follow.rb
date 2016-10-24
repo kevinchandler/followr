@@ -9,7 +9,7 @@ class TwitterFollow < ActiveRecord::Base
     create(
       user_id: user.id,
       username: username,
-      followrd_at: Time.zone.now,
+      followed_at: Time.zone.now,
       hashtag: hashtag,
       twitter_user_id: twitter_user_id
     )
