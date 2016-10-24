@@ -23,7 +23,7 @@ class TwitterFollow < ActiveRecord::Base
     update_attributes!(unfollowed: true, unfollowed_at: Time.zone.now)
   end
 
-  def unfollowable_users
+  def self.unfollowable_users_for(user)
     unfollow_days = user.twitter_follow_preference.unfollow_after
     where('followed_at <= ? AND unfollowed IS NOT TRUE', unfollow_days.to_i.days.ago)
   end

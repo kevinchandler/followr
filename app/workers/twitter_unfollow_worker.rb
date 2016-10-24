@@ -13,7 +13,7 @@ class TwitterUnfollowWorker
     User.can_and_wants_twitter_unfollow.find_in_batches(batch_size: 2) do |group|
       group.each do |user|
         begin
-          users_to_unfollow = user.twitter_follows.unfollowable_users
+          users_to_unfollow = TwitterFollow.unfollowable_users_for(user)
           next if users_to_unfollow.empty?
 
           client = user.credential.twitter_client rescue nil
