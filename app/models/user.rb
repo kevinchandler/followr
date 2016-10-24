@@ -1,8 +1,8 @@
 class User < ActiveRecord::Base
   default_scope -> { includes(:credential, :twitter_follow_preference) }
-
   after_create :init_follow_prefs
 
+  has_many :payments
   has_many :twitter_follows
   has_many :followers
   has_one :credential, dependent: :destroy
@@ -10,11 +10,25 @@ class User < ActiveRecord::Base
 
   scope :wants_twitter_follow, -> {
     joins('INNER JOIN twitter_follow_preferences ON (users.id = user_id)')
-      .where('user_id IS NOT NULL AND twitter_follow_preferences.mass_follow IS TRUE')
+      .where('twitter_follow_preferences.mass_follow IS TRUE')
   }
   scope :wants_twitter_unfollow, -> {
     joins('INNER JOIN twitter_follow_preferences ON (users.id = user_id)')
       .where('twitter_follow_preferences.mass_unfollow IS TRUE')
+  }
+  scope :has_current_auth_with_twitter, -> {
+    joins('INNER JOIN credentials ON (users.id = credentials.user_id)')
+      .where('credentials.is_valid IS TRUE')
+  }
+  scope :can_and_wants_twitter_follow, -> {
+    joins('INNER JOIN credentials ON (users.id = credentials.user_id)')
+      .joins('INNER JOIN twitter_follow_preferences ON (credentials.user_id = twitter_follow_preferences.user_id)')
+      .where('credentials.is_valid IS TRUE AND twitter_follow_preferences.mass_follow IS TRUE')
+  }
+  scope :can_and_wants_twitter_unfollow, -> {
+    joins('INNER JOIN credentials ON (users.id = credentials.user_id)')
+      .joins('INNER JOIN twitter_follow_preferences ON (credentials.user_id = twitter_follow_preferences.user_id)')
+      .where('credentials.is_valid IS TRUE AND twitter_follow_preferences.mass_unfollow IS TRUE')
   }
 
   def self.create_with_omniauth(auth)

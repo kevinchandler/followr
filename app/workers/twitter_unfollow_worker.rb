@@ -12,7 +12,7 @@ class TwitterUnfollowWorker
       return
     end
 
-    User.wants_twitter_unfollow.find_in_batches do |group|
+    User.can_and_wants_twitter_unfollow.find_in_batches(batch_size: 2) do |group|
       group.each do |user|
         begin
           follow_prefs = user.twitter_follow_preference
