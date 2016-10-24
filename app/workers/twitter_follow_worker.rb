@@ -14,15 +14,13 @@ class TwitterFollowWorker
       group.each do |user|
         begin
           follow_prefs = user.twitter_follow_preference
-          hashtags = follow_prefs.hashtags.gsub('#','').gsub(' ','').split(',').shuffle
-
-          client = user.credential.twitter_client rescue nil
-          next if client.nil?
+          hashtags = follow_prefs.shuffled_hashtags
+          client = user.credential.twitter_client
 
           # Keep track of # of followers user has hourly
-          Follower.compose(user) if Follower.can_compose_for?(user)
+          Follower.compose(user)
 
-          next if !user.twitter_check? || user.rate_limited? || !user.can_twitter_follow?          # usernames = []
+          next if !user.twitter_check? || user.rate_limited? || !user.can_twitter_follow?
 
           hashtags.each do |hashtag|
             tweets = client.search("##{hashtag}").collect.take(rand(20..300))
@@ -31,18 +29,19 @@ class TwitterFollowWorker
               username = tweet.user.screen_name.to_s
               twitter_user_id = tweet.user.id
 
-
               # dont follow people who have opted out
               next if username.in? OptOuter.all
+
               # dont follow people we previously have
-              entry = TwitterFollow.where(user: user, username: username)
-              next if entry.present?
+              next if user.twitter_follows.where(username: username).any?
 
-              client.friendship_update(username, { :wants_retweets => false })
-              muted = client.mute(username) # don't show their tweets in our feed
-              followed = client.follow(username)
+              client.friendship_update(username, wants_retweets: false)
 
-              TwitterFollow.follow(user, username, hashtag, twitter_user_id) if followed
+              # don't show their tweets in our feed
+              client.mute(username)
+              client.follow(username)
+
+              TwitterFollow.follow(user, username, hashtag, twitter_user_id)
             end
           end
         rescue Twitter::Error::TooManyRequests => e
@@ -60,14 +59,18 @@ class TwitterFollowWorker
           if e.message.index 'Read-only application cannot POST.'
             Airbrake.notify(e)
             Credential.update_all(is_valid: false)
-            ActionMailer::Base.mail(:to => ENV['ADMIN_EMAIL'], :subject => 'Twitter has restricted write access', :body => 'Subject says it all').deliver if send_notification?
+
+            ActionMailer::Base.mail(
+              to: ENV['ADMIN_EMAIL'],
+              subject: 'Twitter has restricted write access',
+              body: 'Subject says it all'
+            ).deliver if send_notification?
+
             Rails.cache.write('read-only-application-notification', true, expires_in: 10.hours)
-            raise "Read-only application cannot POST."
+            raise 'Read-only application cannot POST.'
           end
         rescue Twitter::Error::Unauthorized => e
-          # follow_prefs.update_attributes(mass_follow: false, mass_unfollow: false)
           user.credential.update_attributes(is_valid: false)
-          puts "#{user.twitter_username} || #{e}"
         rescue => e
           Airbrake.notify(e)
         end

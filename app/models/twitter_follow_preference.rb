@@ -11,4 +11,8 @@ class TwitterFollowPreference < ActiveRecord::Base
   def want_mass_follow?
     mass_follow
   end
+
+  def shuffled_hashtags
+    hashtags.tr('#','').tr(' ','').split(',').shuffle
+  end
 end

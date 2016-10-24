@@ -14,7 +14,7 @@ class Credential < ActiveRecord::Base
   end
 
   def twitter_client
-    return nil if [twitter_oauth_token, twitter_oauth_token_secret].include?(nil)
+    raise 'Invalid credentials' if [twitter_oauth_token, twitter_oauth_token_secret].include?(nil)
 
     client = Twitter::REST::Client.new do |c|
       c.consumer_key        = ENV['TWITTER_CONSUMER_KEY']

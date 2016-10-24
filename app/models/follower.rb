@@ -6,7 +6,7 @@ class Follower < ActiveRecord::Base
     client = user.credential.twitter_client rescue nil
     followers_count = client.follower_ids.count rescue nil
 
-    return if client.nil? || followers_count.nil?
+    return if client.nil? || followers_count.nil? || !self.can_compose_for?(user)
 
     options = {
       source: 'twitter',

@@ -2,27 +2,22 @@ class TwitterUnfollowWorker
   include Sidekiq::Worker
   include Sidetiq::Schedulable
 
-  recurrence {
-    daily.hour_of_day(0, 6, 7, 8, 22, 23)
-   }
+  recurrence { daily.hour_of_day(0, 6, 7, 8, 22, 23) }
 
   def perform
     unless ENV['WORKERS_DRY_RUN'].blank?
-      puts "TwitterUnfollowWorker run but returning due to WORKERS_DRY_RUN env variable"
+      puts 'TwitterUnfollowWorker run but returning due to WORKERS_DRY_RUN env variable'
       return
     end
 
     User.can_and_wants_twitter_unfollow.find_in_batches(batch_size: 2) do |group|
       group.each do |user|
         begin
-          follow_prefs = user.twitter_follow_preference
-          unfollow_days = follow_prefs.unfollow_after
-          users_to_unfollow = user.twitter_follows.where('followed_at <= ? AND UNFOLLOWED IS NOT TRUE', unfollow_days.to_i.days.ago)
+          users_to_unfollow = user.twitter_follows.unfollowable_users
+          next if users_to_unfollow.empty?
 
           client = user.credential.twitter_client rescue nil
           client_muted_ids = client.muted_ids.to_a rescue []
-
-          next if client.nil? || users_to_unfollow.empty?
           next unless user.can_twitter_unfollow?
 
           users_to_unfollow.each do |followed_user|
@@ -33,9 +28,9 @@ class TwitterUnfollowWorker
               next unless client_muted_ids.include?(twitter_user_id)
 
               if client.unfollow(twitter_user_id)
-                followed_user.update_attributes({ unfollowed: true, unfollowed_at: DateTime.now })
+                followed_user.update_attributes(unfollowed: true, unfollowed_at: Time.zone.now)
                 client.unmute(twitter_user_id)
-                retweets_on = client.friendship_update(twitter_user_id, { :wants_retweets => true })
+                client.friendship_update(twitter_user_id, wants_retweets: true)
               end
 
             rescue Twitter::Error::Forbidden => e
@@ -48,12 +43,18 @@ class TwitterUnfollowWorker
               if e.message.index 'Read-only application cannot POST.'
                 Airbrake.notify(e)
                 Credential.update_all(is_valid: false)
-                ActionMailer::Base.mail(:to => ENV['ADMIN_EMAIL'], :subject => 'Twitter has restricted write access', :body => 'Subject says it all').deliver if send_notification?
+
+                ActionMailer::Base.mail(
+                  to: ENV['ADMIN_EMAIL'],
+                  subject: 'Twitter has restricted write access',
+                  body: 'Subject says it all'
+                ).deliver if send_notification?
+
                 Rails.cache.write('read-only-application-notification', true, expires_in: 10.hours)
-                raise "Read-only application cannot POST."
+                raise 'Read-only application cannot POST.'
               end
-            rescue Twitter::Error::NotFound => e
-              followed_user.update_attributes({ unfollowed: true, unfollowed_at: DateTime.now })
+            rescue Twitter::Error::NotFound
+              followed_user.update_attributes(unfollowed: true, unfollowed_at: Time.zone.now)
             rescue => e
               Airbrake.notify(e)
             end
@@ -69,5 +70,4 @@ class TwitterUnfollowWorker
     cache = Rails.cache.read('read-only-application-notification')
     cache.nil? && true || false
   end
-
 end

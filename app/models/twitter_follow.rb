@@ -23,6 +23,11 @@ class TwitterFollow < ActiveRecord::Base
     update_attributes!(unfollowed: true, unfollowed_at: Time.zone.now)
   end
 
+  def unfollowable_users
+    unfollow_days = user.twitter_follow_preference.unfollow_after
+    where('followed_at <= ? AND unfollowed IS NOT TRUE', unfollow_days.to_i.days.ago)
+  end
+
   def self.get_trending_hashtags(user_id)
     unless Rails.cache.read('twitter_trending_hashtags').present?
       user = User.find user_id
