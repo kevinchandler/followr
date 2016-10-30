@@ -25,7 +25,10 @@ class TwitterFollow < ActiveRecord::Base
 
   def self.unfollowable_users_for(user)
     unfollow_days = user.twitter_follow_preference.unfollow_after
-    where('followed_at <= ? AND unfollowed IS NOT TRUE', unfollow_days.to_i.days.ago)
+    where(user: user).where(
+      'followed_at <= ? AND unfollowed IS NOT TRUE',
+      unfollow_days.to_i.days.ago
+    )
   end
 
   def self.get_trending_hashtags(user_id)
