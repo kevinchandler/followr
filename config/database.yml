@@ -1,15 +1,18 @@
-# production:
-#   adapter: postgresql
-#   database: <%= ENV['APP_DB'] %>
-#   username: <%= ENV['APP_DB_USER'] %>
-#   password: <%= ENV['APP_DB_PASSWORD'] %>
-#   host: <%= ENV['APP_DB_HOST'] %>
-#   pool: 15
+default: &default
+  adapter: postgresql
+  database: <%= ENV['DB_NAME'] %>
+  username: <%= ENV['DB_USER'] %>
+  port: <%= ENV['DB_PORT'] || '5432' %>
+  password: <%= ENV['DB_PASSWORD'] %>
+  host: <%= ENV['DB_HOST'] %>
+  pool: 15
+  timeout: 5000
+
+test:
+  <<: *default
 
 development:
-  adapter: postgresql
-  database: <%= ENV['APP_DB'] %>
-  username: <%= ENV['APP_DB_USER'] %>
-  password: <%= ENV['APP_DB_PASSWORD'] %>
-  host: <%= ENV['APP_DB_HOST'] %>
-  pool: 15
+  <<: *default
+
+production:
+  <<: *default

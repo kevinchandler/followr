@@ -42,14 +42,14 @@ Rails.application.configure do
   ActionMailer::Base.smtp_settings = {
     :address              => "smtp.mandrillapp.com",
     :port                 => '587',
-    :user_name            => ENV['MANDRILL_USERNAME'],
-    :password             => ENV['MANDRILL_API_KEY'], # dev api key
+    :user_name            => ENV['SENDGRID_USERNAME'],
+    :password             => ENV['SENDGRID_API_KEY'],
     :authentication       => :plain,
-    :domain               => 'followr.club',
+    :domain               => ENV['DOMAIN'],
   }
 
   config.action_mailer.raise_delivery_errors = true
-  ActionMailer::Base.default :from => 'Followr <no-reply@followr.club>'
+  ActionMailer::Base.default :from => "Followr <no-reply@#{ENV['DOMAIN']}>"
 
   # Raises error for missing translations
   # config.action_view.raise_on_missing_translations = true

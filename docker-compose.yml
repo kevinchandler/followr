@@ -1,0 +1,28 @@
+version: '2'
+services:
+  db:
+    image: postgres:9.4.1
+    ports:
+      - "5432:5432"
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+  web:
+    build: .
+    command: bundle exec rails s -p 3000 --binding 0.0.0.0
+    ports:
+      - "3000:3000"
+    links:
+      - db
+    env_file:
+      - '.env'
+    volumes:
+      - .:/followr
+  sidekiq:
+    build: .
+    command: bundle exec sidekiq -c 10 -q default,1
+    volumes:
+      - '.:/followr'
+    env_file:
+      - '.env'
