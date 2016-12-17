@@ -9,8 +9,7 @@ A `Dockerfile` and `docker-compose.yml` are provided with the app, allowing to b
 
 
 ```shell
-$ docker-compose run web rails g model MyModel
-$ docker-compose run web rake db:migrate
+$ docker-compose run web rake db:create db:migrate
 $ docker-compose run web bundle install
 ```
 
