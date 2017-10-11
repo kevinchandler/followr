@@ -2,7 +2,7 @@
 
 Mass follow & profit w/ followers
 
-[Working demo](https://followr.herokuapp.com)
+[Working demo](http://twitterblast.herokuapp.com/)
 
 ## Development environment
 A `Dockerfile` and `docker-compose.yml` are provided with the app, allowing to boot a self-contained development environment.
